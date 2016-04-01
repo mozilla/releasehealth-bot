@@ -1,0 +1,17 @@
+{
+  "45": {
+    "blocking": 1,
+    "new": 2,
+    "known": 2
+  },
+  "46": {
+    "blocking": 3,
+    "new": 5,
+    "known": 5
+  },
+  "47": {
+    "blocking": 6,
+    "new": 7,
+    "known": 8
+  }
+}
