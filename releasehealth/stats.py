@@ -69,6 +69,10 @@ class Stats(object):
         for ver in self.bzconfig['versions'].values():
             for query in self.bzconfig['bugQueries']:
                 vernum = ver['version']
+
+                logging.debug('Polling Bugzilla: %s %s %s' %
+                              (ver['title'], vernum, query['title']))
+
                 url = self.bzconfig['BUGZILLA_REST_URL']
                 url += query['url'].replace('{RELEASE}', str(vernum)) \
                                    .replace('{OLDERRELEASE}', str(vernum - 1))
@@ -84,10 +88,15 @@ class Stats(object):
                     logging.error('Error querying Bugzilla URL %s: status %s' %
                                   (url, r.status_code))
                     continue
+
                 key = '%s:%s' % (vernum, query['id'])
                 current_bug_num = len(r.json()['bugs'])
                 last_bug_num = (None if not self.redis_client.llen(key) else
                                 json.loads(self.redis_client.lindex(key, 0))[0])
+
+                logging.debug('Results: %s -> %s' %
+                              (last_bug_num, current_bug_num))
+
                 if current_bug_num != last_bug_num:
                     logging.info('%s has changed from %s to %s.' %
                                  (key, last_bug_num, current_bug_num))
