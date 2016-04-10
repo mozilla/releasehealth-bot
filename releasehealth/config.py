@@ -38,3 +38,6 @@ REDIS_URL = os.environ.get('REDIS_URL', 'http://localhost:6379')
 
 # How often, in seconds, to query Bugzilla.
 STATS_REFRESH_PERIOD = int(os.environ.get('STATS_REFRESH_PERIOD', 5*60))
+
+# Password to send to NickServ upon connection.
+NICKSERV_PASSWORD = os.environ.get('NICKSERV_PASSWORD')

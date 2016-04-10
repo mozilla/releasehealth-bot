@@ -71,6 +71,11 @@ class Bot(irc.client.SimpleIRCClient):
     def on_welcome(self, connection, event):
         # TODO: Log errors when joining channels.
         logging.info('Connected!')
+
+        if config.NICKSERV_PASSWORD:
+            self.connection.privmsg('NickServ',
+                                    'identify %s' % config.NICKSERV_PASSWORD)
+
         for channel in config.IRC_CHANNELS:
             channel_name, _, key = channel.partition(':')
             connection.join(channel_name, key)
