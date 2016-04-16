@@ -34,7 +34,7 @@ def search():
 
     query_values = json.loads(file('query_values.json').read())
 
-    return jsonify({'bugs': range(1, query_values[version][query] + 1)})
+    return jsonify({'bug_count': query_values[version][query]})
 
 
 if __name__ == '__main__':

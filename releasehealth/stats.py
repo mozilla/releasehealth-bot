@@ -76,6 +76,7 @@ class Stats(object):
                 url = self.bzconfig['BUGZILLA_REST_URL']
                 url += query['url'].replace('{RELEASE}', str(vernum)) \
                                    .replace('{OLDERRELEASE}', str(vernum - 1))
+                url += '&count_only=1'
 
                 try:
                     r = requests.get(url)
@@ -90,7 +91,7 @@ class Stats(object):
                     continue
 
                 key = '%s:%s' % (vernum, query['id'])
-                current_bug_num = len(r.json()['bugs'])
+                current_bug_num = r.json()['bug_count']
                 last_bug_num = (None if not self.redis_client.llen(key) else
                                 json.loads(self.redis_client.lindex(key, 0))[0])
 
