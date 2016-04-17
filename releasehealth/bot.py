@@ -62,10 +62,43 @@ class Bot(irc.client.SimpleIRCClient):
         self.stats_thread.daemon = True
         self.stats_thread.start()
 
+    def on_privmsg(self, connection, event):
+        nick = event.source.nick
+
+        response = self.do_command(event.arguments[0])
+        for line in response:
+            self.connection.privmsg(nick, line)
+
     def on_disconnect(self, connection, event):
         # TODO: Retry, with an exponential backoff timer.
         logging.warn('Disconnected! %s' % event)
         raise SystemExit()
+
+    def do_command(self, cmd_line):
+        cmd_parts = cmd_line.split()
+        cmd = cmd_parts[0]
+        cmd_args = cmd_parts[1:]
+
+        response = []
+
+        if cmd == 'stats':
+            cmd_args = cmd_args[:2]
+            stats_dict = self.stats.get_stats(*cmd_args)
+            for vernum, queries in stats_dict.iteritems():
+                for query, value in queries.iteritems():
+                    response.append('%s (%s) %s: %s' % (
+                        self.stats.version_names[vernum],
+                        vernum,
+                        self.stats.query_names[query],
+                        value
+                    ))
+            response.sort()
+            if not response:
+                response = ['not found']
+        else:
+            response = ['unknown command "%s"' % cmd]
+
+        return response
 
     def poll_stats_loop(self):
         while True:

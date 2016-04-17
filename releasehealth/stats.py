@@ -19,6 +19,8 @@ class Stats(object):
         self.version_callback = version_callback
         self._redis_client = None
         self._bzconfig = None
+        self._version_names = None
+        self._query_names = None
 
     @property
     def redis_client(self):
@@ -36,7 +38,26 @@ class Stats(object):
                 k: json.loads(v) for k, v in
                 self.redis_client.hgetall('bzconfig').iteritems()
             }
+            self._version_names = None
+            self._query_names = None
         return self._bzconfig
+
+    @property
+    def version_names(self):
+        if not self._version_names:
+            self._version_names = {
+                v['version']: v['title'] for v
+                in self._bzconfig['versions'].values()
+            }
+        return self._version_names
+
+    @property
+    def query_names(self):
+        if not self._query_names:
+            self._query_names = {
+                q['id']: q['title'] for q in self._bzconfig['bugQueries']
+            }
+        return self._query_names
 
     def refresh_bzconfig(self):
         """Store the releasehealth dashboard's Bugzilla config.
@@ -64,6 +85,39 @@ class Stats(object):
         else:
             logging.error('Error fetching bzconfig from %s: status %s' %
                           (config.BZCONFIG_JSON_URL, r.status_code))
+
+    def get_stats(self, version=None, query=None):
+        if version and version != '*':
+            try:
+                versions = [int(version)]
+            except ValueError:
+                versions = [self.bzconfig['versions'][version]]
+        else:
+            versions = [x['version'] for x
+                        in self.bzconfig['versions'].values()]
+
+        if query and query != '*':
+            query = query.lower()
+            queries = [
+                x['id'] for x in self.bzconfig['bugQueries']
+                if x['title'].replace(' ', '').lower().startswith(query)
+            ]
+        else:
+            queries = [x['id'] for x in self.bzconfig['bugQueries']]
+
+        results = {}
+
+        for v in versions:
+            results[v] = {}
+            for q in queries:
+                key = '%s:%s' % (v, q)
+                try:
+                    results[v][q] = json.loads(
+                        self.redis_client.lindex(key, 0))[0]
+                except TypeError:
+                    pass
+
+        return results
 
     def refresh_stats(self):
         for ver in self.bzconfig['versions'].values():
