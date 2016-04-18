@@ -4,6 +4,7 @@
 
 import logging
 import ssl
+import threading
 import time
 
 import irc.client
@@ -20,7 +21,8 @@ class Bot(irc.client.SimpleIRCClient):
         # way in stats_changed(), but only if we have never had data for
         # a particular version.  This won't catch when a version is promoted,
         # e.g. from Nightly to Developer Edition).
-        self.stats = Stats(stats_callback=self.stats_changed)
+        self.stats = Stats(stats_callback=self.stats_callback)
+        self.stats_thread = None
         self.last_bzconfig_refresh = None
 
     def connect(self):
@@ -56,17 +58,19 @@ class Bot(irc.client.SimpleIRCClient):
             channel_name = channel.split(':')[0]
             self.connection.privmsg(channel_name, msg)
 
-    def poll_stats(self):
-        now = time.time()
-        if (not self.last_bzconfig_refresh or
-            (now - self.last_bzconfig_refresh >=
-             config.BZCONFIG_REFRESH_PERIOD)):
-            logging.info('Refreshing bzconfig.')
-            self.stats.refresh_bzconfig()
-            logging.info('bzconfig refresh complete.')
-            self.last_bzconfig_refresh = now
+    def poll_stats_loop(self):
+        while True:
+            now = time.time()
+            if (not self.last_bzconfig_refresh or
+                (now - self.last_bzconfig_refresh >=
+                 config.BZCONFIG_REFRESH_PERIOD)):
+                logging.info('Refreshing bzconfig.')
+                self.stats.refresh_bzconfig()
+                logging.info('bzconfig refresh complete.')
+                self.last_bzconfig_refresh = now
 
-        self.stats.refresh_stats()
+            self.stats.refresh_stats()
+            time.sleep(config.STATS_REFRESH_PERIOD)
 
     def on_welcome(self, connection, event):
         # TODO: Log errors when joining channels.
@@ -79,10 +83,15 @@ class Bot(irc.client.SimpleIRCClient):
         for channel in config.IRC_CHANNELS:
             channel_name, _, key = channel.partition(':')
             connection.join(channel_name, key)
-        self.reactor.execute_every(config.STATS_REFRESH_PERIOD,
-                                   self.poll_stats)
+
+        self.stats_thread = threading.Thread(target=self.poll_stats_loop)
+        self.stats_thread.daemon = True
+        self.stats_thread.start()
 
     def on_disconnect(self, connection, event):
         # TODO: Retry, with an exponential backoff timer.
         logging.warn('Disconnected! %s' % event)
         raise SystemExit()
+
+    def stats_callback(self, *args):
+        self.reactor.execute_delayed(0, self.stats_changed, args)
