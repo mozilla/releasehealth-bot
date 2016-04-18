@@ -4,6 +4,7 @@
 
 import logging
 import ssl
+import string
 import threading
 import time
 
@@ -68,6 +69,24 @@ class Bot(irc.client.SimpleIRCClient):
         response = self.do_command(event.arguments[0])
         for line in response:
             self.connection.privmsg(nick, line)
+
+    def on_pubmsg(self, connection, event):
+        """Respond to public messages.
+
+        Any message that starts with our nick followed by a space or
+        punctuation is treated as a command.
+        """
+        msg = event.arguments[0]
+        if not msg.startswith(connection.get_nickname()):
+            return
+
+        cmd_line = msg[len(connection.get_nickname()):]
+        if (cmd_line[0] in string.whitespace or
+                cmd_line[0] in string.punctuation):
+            cmd_line = cmd_line[1:].strip()
+            response = self.do_command(cmd_line)
+            for line in response:
+                self.connection.privmsg(event.target, line)
 
     def on_disconnect(self, connection, event):
         # TODO: Retry, with an exponential backoff timer.
