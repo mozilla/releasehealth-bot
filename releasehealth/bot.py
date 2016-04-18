@@ -46,32 +46,6 @@ class Bot(irc.client.SimpleIRCClient):
             connect_factory=factory
         )
 
-    def stats_changed(self, vernum, vername, query, old_value, new_value):
-        if old_value is None:
-            msg = 'New metric: %s %s %s: %d' % (vername, vernum, query,
-                                                new_value)
-        else:
-            action = 'increased' if old_value < new_value else 'decreased'
-            msg = '%s %s %s %s from %d to %d.' % (
-                vername, vernum, query, action, old_value, new_value)
-        for channel in config.IRC_CHANNELS:
-            channel_name = channel.split(':')[0]
-            self.connection.privmsg(channel_name, msg)
-
-    def poll_stats_loop(self):
-        while True:
-            now = time.time()
-            if (not self.last_bzconfig_refresh or
-                (now - self.last_bzconfig_refresh >=
-                 config.BZCONFIG_REFRESH_PERIOD)):
-                logging.info('Refreshing bzconfig.')
-                self.stats.refresh_bzconfig()
-                logging.info('bzconfig refresh complete.')
-                self.last_bzconfig_refresh = now
-
-            self.stats.refresh_stats()
-            time.sleep(config.STATS_REFRESH_PERIOD)
-
     def on_welcome(self, connection, event):
         # TODO: Log errors when joining channels.
         logging.info('Connected!')
@@ -93,5 +67,31 @@ class Bot(irc.client.SimpleIRCClient):
         logging.warn('Disconnected! %s' % event)
         raise SystemExit()
 
+    def poll_stats_loop(self):
+        while True:
+            now = time.time()
+            if (not self.last_bzconfig_refresh or
+                (now - self.last_bzconfig_refresh >=
+                 config.BZCONFIG_REFRESH_PERIOD)):
+                logging.info('Refreshing bzconfig.')
+                self.stats.refresh_bzconfig()
+                logging.info('bzconfig refresh complete.')
+                self.last_bzconfig_refresh = now
+
+            self.stats.refresh_stats()
+            time.sleep(config.STATS_REFRESH_PERIOD)
+
     def stats_callback(self, *args):
         self.reactor.execute_delayed(0, self.stats_changed, args)
+
+    def stats_changed(self, vernum, vername, query, old_value, new_value):
+        if old_value is None:
+            msg = 'New metric: %s %s %s: %d' % (vername, vernum, query,
+                                                new_value)
+        else:
+            action = 'increased' if old_value < new_value else 'decreased'
+            msg = '%s %s %s %s from %d to %d.' % (
+                vername, vernum, query, action, old_value, new_value)
+        for channel in config.IRC_CHANNELS:
+            channel_name = channel.split(':')[0]
+            self.connection.privmsg(channel_name, msg)
