@@ -83,3 +83,6 @@ ENV/
 
 # Spyder project settings
 .spyderproject
+
+# releasehealth-bot specific settings
+test/query_values.json
