@@ -87,11 +87,21 @@ class Stats(object):
                           (config.BZCONFIG_JSON_URL, r.status_code))
 
     def get_stats(self, version=None, query=None):
+        results = {}
+
         if version and version != '*':
             try:
                 versions = [int(version)]
             except ValueError:
-                versions = [self.bzconfig['versions'][version]]
+                try:
+                    version = version.lower()
+                    versions = [
+                        v['version'] for k, v
+                        in self.bzconfig['versions'].iteritems()
+                        if k.lower().startswith(version)
+                    ]
+                except KeyError:
+                    return results
         else:
             versions = [x['version'] for x
                         in self.bzconfig['versions'].values()]
@@ -104,8 +114,6 @@ class Stats(object):
             ]
         else:
             queries = [x['id'] for x in self.bzconfig['bugQueries']]
-
-        results = {}
 
         for v in versions:
             results[v] = {}
