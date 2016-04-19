@@ -30,6 +30,9 @@ IRC_NICKNAME = os.environ.get('IRC_NICKNAME', 'releasehealth')
 # IRC server port.
 IRC_PORT = int(os.environ.get('IRC_PORT', 6667))
 
+# "ircname", aka real name.
+IRC_REALNAME = 'https://github.com/mozilla/releasehealth-bot'
+
 # 1 to enable SSL; 0 to disable SSL.
 IRC_SSL = bool(int(os.environ.get('IRC_SSL', 0)))
 

@@ -44,6 +44,7 @@ class Bot(irc.client.SimpleIRCClient):
             config.IRC_SERVER,
             config.IRC_PORT,
             config.IRC_NICKNAME,
+            ircname=config.IRC_REALNAME,
             connect_factory=factory
         )
 
